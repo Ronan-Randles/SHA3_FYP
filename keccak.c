@@ -1,4 +1,12 @@
 /**
+ * Written by Ronan Randles
+ * Student number: 19242441
+ * 
+ * Reference material used:
+ * https://github.com/XKCP/XKCP/blob/master/Standalone/CompactFIPS202/C/Keccak-readable-and-compact.c
+ */
+
+/**
   * Function to compute the Keccak[r, c] sponge function over a given input.
   * @param  rate            The value of the rate r.
   * @param  capacity        The value of the capacity c.
@@ -28,6 +36,7 @@ typedef uint64_t tKeccakLane;
 
 #define ROL64(a, offset) ((((uint64_t)a) << offset) ^ (((uint64_t)a) >> (64-offset)))
 #define i(x, y) ((x)+5*(y))
+#define Keccak_Rounds 24
 
 // Works for Little Endian system, more needed to support Big Endian
 #define readLane(x, y)          (((tKeccakLane*)state)[i(x, y)])
@@ -56,7 +65,6 @@ int LFSR86540(uint8_t *LFSR)
 static void print_state(uint8_t state[25]){
     int x, y;
 
-
     //print in format of sha3 example pdf
     for (int p = 0; p < 5; p++) {
         for (int l = 0; l < 5; l++) {
@@ -72,25 +80,59 @@ void KeccakF1600(void *state)
 {
     unsigned int round, x, y, j, t;
     uint8_t LFSRstate = 0x01;
-    // for (int p = 0; p < 5; p++) {
-    //     for (int l = 0; l < 5; l++)
-    //         printf("Sample [%i,%i] %lx\n",l, p, readLane(l,p));
-    // }
-    printf("\n\n\n");
-    print_state(state);
-    printf("\n\n\n");
-    //FOR LOOP
+
+    for (round = 0; round < 1; round++)
     {
         //Theta step
-        tKeccakLane C[5], D;
+        {
+            tKeccakLane C[5], D;
 
-        for (x = 0; x < 5; x++)
-            C[x] = readLane(x, 0) ^ readLane(x, 1) ^ readLane(x, 2) ^ readLane(x, 3) ^ readLane(x, 4);
-        for (x = 0; x < 5; x++) {
-            D = C[(x + 4) % 5] ^ ROL64(C[(x+1) % 5], 1);
-            for (y = 0; y < 5; y++)
-                XORLane(x, y, D);
-        }    
+            for (x = 0; x < 5; x++)
+                C[x] = readLane(x, 0) ^ readLane(x, 1) ^ readLane(x, 2) ^ readLane(x, 3) ^ readLane(x, 4);
+            for (x = 0; x < 5; x++) {
+                D = C[(x + 4) % 5] ^ ROL64(C[(x+1) % 5], 1);
+                for (y = 0; y < 5; y++)
+                    XORLane(x, y, D);
+            }    
+        }
+        //Rho and Pi step
+        //TODO (non-essential): Split Rho and Pi for sake of separation from reference material
+        {
+            tKeccakLane current, tmp;
+
+            //Start at (x,y) = (1,0)
+            x = 1;
+            y = 0;
+            current = readLane(x, y);
+
+            for (t = 0; t < 24; t++) {
+                unsigned int r = ((t + 1) * (t + 2) / 2) % 64;
+                unsigned int Y = (2 * x + 3 * y) % 5;
+                x = y;
+                y = Y;
+                tmp = readLane(x, y);
+                writeLane(x, y, ROL64(current, r));
+                current = tmp;
+            }
+        }
+        //Chi step
+        {
+            tKeccakLane temp[5];
+            for (y = 0; y < 5; y++){
+                for(x = 0; x < 5; x++)
+                    temp[x] = readLane(x, y);
+                for(x = 0; x < 5; x++)
+                    writeLane(x, y, temp[x] ^ ((~ temp[(x + 1) % 5]) & temp[(x + 2) % 5]));
+            }
+        }
+        //Iota step
+        {
+            for (j = 0; j < 7; j++) {
+                unsigned int bitPosition = (1 << j) - 1; /* (2^j)-1 */
+                if (LFSR86540(&LFSRstate))
+                    XORLane(0, 0, (tKeccakLane)1 << bitPosition);
+            }
+        }
     }
 
     print_state(state);
