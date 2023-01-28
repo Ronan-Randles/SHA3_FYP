@@ -108,7 +108,7 @@ void KeccakF1600(void *state)
 {
     unsigned int round, x, y, j, t;
     // uint8_t LFSRstate = 0x01;
-    print_state(state,0);
+    //print_state(state,0);
     for (round = 0; round < 25; round++)
     {
         //print_state(state, round);
@@ -171,10 +171,11 @@ void KeccakF1600(void *state)
             // }
             XORLane(0,0,keccakf_rndc[round]);
             last_perm = Iota;
-            print_state(state, round);
+            //print_state(state, round);
         }
         
     }
+    //print_state(state, 99);
 
     
 }
@@ -196,7 +197,7 @@ void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsi
     unsigned char *prev_ptr;
     int individual_length;
     char *temp = malloc(MAXSTRLEN);
-
+    //printf("INPUT: [%s]\n", input);
     memset(state, 0, sizeof(state));
     // //Absorb input blocks from sting using parsing
     ptr = strchr(input,',');
@@ -273,7 +274,7 @@ void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsi
     
 }
 
-int main() {
-    Keccak(256, 1344, sample_input_2, 1024, ',', "TODO", 512);
-    //KeccakF1600(&sample_input);
-}
+// int main() {
+//     Keccak(256, 1344, sample_input_2, 1024, ',', "TODO", 512);
+//     //KeccakF1600(&sample_input);
+// }
