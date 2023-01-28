@@ -4,7 +4,7 @@
 #include "random.c"
 #include <time.h>
 
-#define n_inputs 1000000
+#define n_inputs 10
 #define buffer_max 512
 
 int generate_input(int n){
