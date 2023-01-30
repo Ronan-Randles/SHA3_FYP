@@ -168,7 +168,6 @@ void KeccakF1600(void *state)
 
 void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsigned long long int inputByteLen, unsigned char delimitedSuffix, unsigned char *output, unsigned long long int outputByteLen)
 {
-    printf("Input: %s\n", input);
     uint64_t state[25];
     unsigned int rateInBytes = rate/8;
     unsigned int blockSize = 0;
@@ -206,10 +205,11 @@ void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsi
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
     return;
-    print_state(state, -1);
+    // print_state(state, -1);
     KeccakF1600(state);
 
-    print_state(state, 99);
+    //print_state(state, 99);
+
     // while(inputByteLen > 0) {
     //     blockSize = MIN(inputByteLen, rateInBytes);
        

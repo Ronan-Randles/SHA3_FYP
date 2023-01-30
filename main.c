@@ -5,7 +5,7 @@
 #include <time.h>
 #include <string.h>
 
-#define n_inputs 10
+#define n_inputs 1000000
 #define buffer_max 512
 
 int generate_input(int n){
@@ -50,7 +50,7 @@ int main(){
     int line_count = 0;
     ssize_t line_size;
 
-    printf("Generating inputs...\n");
+    printf("\nGenerating inputs...\n");
     generate_input(n_inputs);
 
     clock_t start, end;
@@ -61,50 +61,37 @@ int main(){
         return EXIT_FAILURE;
     }
 
-    printf("Loading inputs...\n");
+    printf("\nLoading inputs...\n");
+    
 
     //TODO: clean up with do-while
     /* Get the first line of the file. */
-    line_size = getline(&line_buf, &line_buf_size, fp);
-    inputs[line_count] = malloc(sizeof(line_buf));
-    strcpy(inputs[line_count], line_buf);
-    if (inputs[line_count] == NULL){
-        printf("Failed to allocate memory\n");
-        return -1;
-    }
+    // line_size = getline(&line_buf, &line_buf_size, fp);
+    // inputs[line_count] = line_buf;
     
     /* Loop through until we are done with the file. */
-    while (line_size >= 0)
+    do
     {
-        //printf("\ninputs[%i]: %s\n", line_count, inputs[line_count]);
-        printf("LINEBUF size: %i\n", sizeof(line_buf));
-        /* Increment our line count */
-        line_count++;
-        /* Get the next line */
         line_size = getline(&line_buf, &line_buf_size, fp);
 
-        for (int i = 0; i < line_count; i++){
-            printf("Inputs[%i]: %s\n Address:%p\n", i, inputs[i], &inputs[i]);
-        }
+        if (line_size < 0)
+            break; 
 
-        printf("Linesize: %zd\n", line_size);
-        if (line_size < 0) {
-            printf("Breaking\n");
+        //printf("\n### ITERATION:%i ###\n", line_count);
+        //Allocate enough memory to store actual string pointed to by line_buf
+        inputs[line_count] = malloc(512 * sizeof(char));
+        strcpy(inputs[line_count],line_buf);
 
-            break;
-        }    
-        printf("Linecount: %i\n", line_count);
-        inputs[line_count] = malloc(4);
-         printf("Inputs[%i]: %s\n Address:%p\n", line_count, inputs[line_count], &inputs[line_count]);
-        if (inputs[line_count] == NULL){
-            printf("Failed to allocate memory\n");
-            return -1;
-        }
-        strcpy(inputs[line_count], line_buf);
+        // for (int i = 0; i <= line_count; i++){
+        //     printf("Address:%p\nInputs[%i]: %s\n\n", &inputs[i], i, inputs[i]);
+        // }
 
-    }
 
-    printf("\n\n");
+
+        line_count++;
+
+    } while (line_size >= 0);
+
 
     // for (int i = 0; i < sizeof(inputs)/sizeof(inputs[0]); i++){
     //     printf("Inputs[%i]: %s\n", i, inputs[i]);
@@ -127,5 +114,5 @@ int main(){
 
     /* Close the file now that we are done with it */
     fclose(fp);
-    printf("\n\nTime taken to hash %i inputs: %f seconds\n", n_inputs, duration);
+    printf("\nTime taken to hash %i inputs: %f seconds\n", n_inputs, duration);
 }
