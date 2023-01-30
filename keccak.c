@@ -59,17 +59,6 @@ uint64_t sample_input[25] =     {0xa3a3a3a3a3a3a3a3, 0xa3a3a3a3a3a3a3a3, 0xa3a3a
 
 unsigned char *sample_input_2 = "0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0x0000000000000000,0x0,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000";
 
-// int LFSR86540(uint8_t *LFSR)
-// {
-//     int result = ((*LFSR) & 0x01) != 0;
-//     if (((*LFSR) & 0x80) != 0)
-//         /* Primitive polynomial over GF(2): x^8+x^6+x^5+x^4+1 */
-//         (*LFSR) = ((*LFSR) << 1) ^ 0x71;
-//     else
-//         (*LFSR) <<= 1;
-//     return result;
-// }
-
 static const uint64_t keccakf_rndc[24] = {
     SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL),
     SHA3_CONST(0x800000000000808aUL), SHA3_CONST(0x8000000080008000UL),
@@ -98,11 +87,6 @@ static void print_state(uint64_t state[25], int round){
     }
     printf("\n");
 }
-
-// void ReverseLane(void *state, int round){
-//     printf("Lane [%i, %i]: %.16lx reversed: %.16lx \n", round % 5, (int)(round/5), readLane(round % 5, (int)(round/5)), bswap_64(readLane(round % 5, (int)(round/5))));
-//     writeLane((int)(round/5),round % 5,bswap_64(readLane(round % 5, (int)(round/5))));
-// }
 
 void KeccakF1600(void *state)
 {
@@ -175,8 +159,6 @@ void KeccakF1600(void *state)
         }
         
     }
-    //print_state(state, 99);
-
     
 }
 
@@ -186,7 +168,7 @@ void KeccakF1600(void *state)
 
 void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsigned long long int inputByteLen, unsigned char delimitedSuffix, unsigned char *output, unsigned long long int outputByteLen)
 {
-
+    printf("Input: %s\n", input);
     uint64_t state[25];
     unsigned int rateInBytes = rate/8;
     unsigned int blockSize = 0;
@@ -224,9 +206,10 @@ void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsi
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
     return;
-
+    print_state(state, -1);
     KeccakF1600(state);
 
+    print_state(state, 99);
     // while(inputByteLen > 0) {
     //     blockSize = MIN(inputByteLen, rateInBytes);
        
