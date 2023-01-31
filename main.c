@@ -5,10 +5,11 @@
 #include <time.h>
 #include <string.h>
 
-#define n_inputs 1000000
+#define n_inputs 250000
 #define buffer_max 512
 
 int generate_input(int n){
+    //TODO: Could save to array rather than file
     char *filename = "input.txt";
 
     FILE *f = fopen(filename, "w");
@@ -42,7 +43,6 @@ int load_inputs(){
 }
 
 int main(){
-    
     unsigned char *inputs[n_inputs];
     char *FILENAME = "input.txt";
     char *line_buf = NULL;
@@ -63,12 +63,6 @@ int main(){
 
     printf("\nLoading inputs...\n");
     
-
-    //TODO: clean up with do-while
-    /* Get the first line of the file. */
-    // line_size = getline(&line_buf, &line_buf_size, fp);
-    // inputs[line_count] = line_buf;
-    
     /* Loop through until we are done with the file. */
     do
     {
@@ -77,21 +71,17 @@ int main(){
         if (line_size < 0)
             break; 
 
-        //printf("\n### ITERATION:%i ###\n", line_count);
         //Allocate enough memory to store actual string pointed to by line_buf
         inputs[line_count] = malloc(512 * sizeof(char));
+        if(inputs[line_count] == NULL){
+            printf("Failed to allocate memory on input\n");
+        }
+
         strcpy(inputs[line_count],line_buf);
-
-        // for (int i = 0; i <= line_count; i++){
-        //     printf("Address:%p\nInputs[%i]: %s\n\n", &inputs[i], i, inputs[i]);
-        // }
-
-
 
         line_count++;
 
     } while (line_size >= 0);
-
 
     // for (int i = 0; i < sizeof(inputs)/sizeof(inputs[0]); i++){
     //     printf("Inputs[%i]: %s\n", i, inputs[i]);
@@ -99,8 +89,7 @@ int main(){
 
     printf("\nStarting Keccak hashing...\n");
     start = clock();
-    for (int i = 0; i < n_inputs; i++) {
-        
+    for (int i = 0; i < n_inputs; i++) { 
         Keccak(256, 1344, inputs[i], 1024, ',', "TODO", 512);
     }
 
