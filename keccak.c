@@ -6,6 +6,11 @@
  * https://github.com/XKCP/XKCP/blob/master/Standalone/CompactFIPS202/C/Keccak-readable-and-compact.c
  */
 
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 /**
   * Function to compute the Keccak[r, c] sponge function over a given input.
   * @param  rate            The value of the rate r.
@@ -28,12 +33,8 @@
   * @param  outputByteLen   The number of output bytes desired.
   * @pre    One must have r+c=1600 and the rate a multiple of 8 bits in this implementation.
   */
-void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsigned long long int inputByteLen, unsigned char delimitedSuffix, unsigned char *output, unsigned long long int outputByteLen);
+void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs);
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 typedef uint64_t tKeccakLane;
 
 #define ROL64(a, offset) ((((uint64_t)a) << offset) ^ (((uint64_t)a) >> (64-offset)))
@@ -146,13 +147,6 @@ void KeccakF1600(void *state)
         
         //Iota step
         {
-            // for (j = 0; j < 7; j++) {
-            //     unsigned int bitPosition = (1 << j) - 1; /* (2^j)-1 */   
-                   
-            //     if (LFSR86540(&LFSRstate)) {
-            //         XORLane(0, 0, (tKeccakLane)1 << bitPosition);
-            //     }
-            // }
             XORLane(0,0,keccakf_rndc[round]);
             last_perm = Iota;
             //print_state(state, round);
@@ -161,75 +155,18 @@ void KeccakF1600(void *state)
     }
     
 }
-
-#include <string.h>
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAXSTRLEN sizeof("0xa3a3a3a3a3a3a3a3")
 
-void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsigned long long int inputByteLen, unsigned char delimitedSuffix, unsigned char *output, unsigned long long int outputByteLen)
+void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs)
 {
-    uint64_t state[25];
-    unsigned int rateInBytes = rate/8;
-    unsigned int blockSize = 0;
-    unsigned int i;
-    unsigned char *ptr;
-    char *new_ptr;
-    char *remaining;
-    unsigned char *prev_ptr;
-    int individual_length;
-    char *temp = malloc(MAXSTRLEN);
-    //printf("INPUT: [%s]\n", input);
-    memset(state, 0, sizeof(state));
-    // //Absorb input blocks from sting using parsing
-    ptr = strchr(input,',');
-    individual_length = (unsigned char *)ptr - input;
-    memcpy(temp, input, individual_length);
-    for (int i = 0; i < sizeof(state)/8; i++){
-        state[i] = strtoul(temp,&remaining,16);
-
-        if (!ptr)
-            break;
-        memset(temp, 0, MAXSTRLEN);
-        memcpy(temp, ++ptr, individual_length);
-
-        //Save pointer for future length calculations
-        prev_ptr = ptr;
-        
-        //Set new ponter, Incrementation operator skips delimiting comma
-        ptr = strchr(ptr,',');
-
-        //Allow "0x0" to be used instead of "0x000...0"
-        individual_length = ptr - prev_ptr;
-    }
-
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
-    return;
+        return;
     // print_state(state, -1);
-    KeccakF1600(state);
-
-    //print_state(state, 99);
-
-    // while(inputByteLen > 0) {
-    //     blockSize = MIN(inputByteLen, rateInBytes);
-       
-    //     // for (i = 0; i < blockSize; i++){
-    //     //     state[i] ^= input[i];
-    //     //     printf("Input: %x\n", input[i]);
-    //     // }
-    //     char *input_copy = strtok_r(input,",", &token);
-    //     printf("Token: %s\n", token);
-    //     state[count] = atoi(token);
-    //     //print_state(&state, count++);
-    //     input += blockSize;
-    //     inputByteLen -= blockSize;
-
-    //     if (inputByteLen == blockSize) {
-    //         //print_state(state, 999);
-    //         //KeccakF1600(state);
-    //         blockSize = 0;
-    //     }
-    // }
+        for (int i = 0; i < n_inputs; i++) { 
+            KeccakF1600(&input[i]);
+    }
     
     // printf("SQEEZING\n");
     // /* === Do the padding and switch to the squeezing phase === */
@@ -253,11 +190,9 @@ void Keccak(unsigned int rate, unsigned int capacity, unsigned char *input, unsi
     //     if (outputByteLen > 0)
     //         KeccakF1600(state);
     // }
-
     
 }
 
 // int main() {
-//     Keccak(256, 1344, sample_input_2, 1024, ',', "TODO", 512);
-//     //KeccakF1600(&sample_input);
+//     printf("Test\n");
 // }
