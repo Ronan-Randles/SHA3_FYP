@@ -33,7 +33,11 @@
   * @param  outputByteLen   The number of output bytes desired.
   * @pre    One must have r+c=1600 and the rate a multiple of 8 bits in this implementation.
   */
+<<<<<<< HEAD
 void Keccak(unsigned int rate, unsigned int capacity, uint64_t input[][25], int n_inputs);
+=======
+void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs);
+>>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
 
 typedef uint64_t tKeccakLane;
 
@@ -158,7 +162,11 @@ void KeccakF1600(void *state)
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAXSTRLEN sizeof("0xa3a3a3a3a3a3a3a3")
 
+<<<<<<< HEAD
 void Keccak(unsigned int rate, unsigned int capacity, uint64_t input[][25], int n_inputs)
+=======
+void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs)
+>>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
 {
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))

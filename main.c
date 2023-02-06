@@ -4,9 +4,15 @@
 #include "random.c"
 #include <time.h>
 #include <string.h>
+#include <sys/resource.h>
 
+<<<<<<< HEAD
 #define n_inputs 25000
+=======
+#define n_inputs 1000000
+>>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
 #define buffer_max 512
+#define row_size 25*sizeof(uint64_t)
 
 int generate_input(int n){
     //TODO: Could save to array rather than file
@@ -38,7 +44,11 @@ int generate_input(int n){
     return 0;
 }
 
+<<<<<<< HEAD
 int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
+=======
+int preprocess_loadInputs(uint64_t *state, int num_inputs){
+>>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
     unsigned char *inputs[num_inputs];
     char *FILENAME = "input.txt";
     char *line_buf = NULL;
@@ -73,7 +83,6 @@ int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
     } while (line_size >= 0);
     /* Free the allocated line buffer */
     free(line_buf);
-    line_buf = NULL;
     
     /* Close the file now that we are done with it */
     fclose(fp);
@@ -85,6 +94,7 @@ int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
     unsigned char *prev_ptr;
     int individual_length;
     char *temp = malloc(MAXSTRLEN);
+    int state_mem_size = 0;
 
     //memset(state, 0, sizeof(state));
     for (int j = 0; j < num_inputs; j++){
@@ -92,11 +102,12 @@ int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
         ptr = strchr(inputs[j],',');
         individual_length = (unsigned char *)ptr - inputs[j];
         memcpy(temp, inputs[j], individual_length);
-        for (int i = 0; i < sizeof(state[j])/8; i++){
-            state[j][i] = strtoul(temp,&remaining,16);
+        for (int i = 0; i < 25; i++){
+            state[j*row_size + i] = strtoul(temp,&remaining,16);
 
             if (!ptr)
                 break;
+
             memset(temp, 0, MAXSTRLEN);
             memcpy(temp, ++ptr, individual_length);
 
@@ -113,12 +124,15 @@ int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
     //State inputs are now saved to state, an n_inputs*25 array.
     //Now safe to free malloc'ed memory
     free(temp);
+    for (int i = 0; i < n_inputs; i++)
+        free(inputs[i]);
 
     return EXIT_SUCCESS;
 }
 
 int main(){
-    uint64_t state_input[n_inputs][25];
+    uint64_t *state_input = malloc(8 * n_inputs * row_size);
+    
     clock_t start, end = 0;
 
     printf("\nGenerating inputs...\n");
@@ -140,4 +154,5 @@ int main(){
     double duration = ((double)end - start)/CLOCKS_PER_SEC;
 
     printf("\nTime taken to hash %i inputs: %f seconds\n", n_inputs, duration);
+    //free(state_input);
 }
