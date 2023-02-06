@@ -33,11 +33,7 @@
   * @param  outputByteLen   The number of output bytes desired.
   * @pre    One must have r+c=1600 and the rate a multiple of 8 bits in this implementation.
   */
-<<<<<<< HEAD
-void Keccak(unsigned int rate, unsigned int capacity, uint64_t input[][25], int n_inputs);
-=======
 void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs);
->>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
 
 typedef uint64_t tKeccakLane;
 
@@ -162,11 +158,7 @@ void KeccakF1600(void *state)
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAXSTRLEN sizeof("0xa3a3a3a3a3a3a3a3")
 
-<<<<<<< HEAD
-void Keccak(unsigned int rate, unsigned int capacity, uint64_t input[][25], int n_inputs)
-=======
 void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs)
->>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
 {
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
@@ -176,28 +168,7 @@ void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inp
             KeccakF1600(&input[i]);
     }
     
-    // printf("SQEEZING\n");
-    // /* === Do the padding and switch to the squeezing phase === */
-    // /* Absorb the last few bits and add the first bit of padding (which coincides with the delimiter in delimitedSuffix) */
-    // state[blockSize] ^= delimitedSuffix;
-    // /* If the first bit of padding is at position rate-1, we need a whole new block for the second bit of padding */
-    // if (((delimitedSuffix & 0x80) != 0) && (blockSize == (rateInBytes-1)))
-    //     KeccakF1600(state);
-    // /* Add the second bit of padding */
-    // state[rateInBytes-1] ^= 0x80;
-    // /* Switch to the squeezing phase */
-    // KeccakF1600(state);
 
-    // /* === Squeeze out all the output blocks === */
-    // while(outputByteLen > 0) {
-    //     blockSize = MIN(outputByteLen, rateInBytes);
-    //     memcpy(output, state, blockSize);
-    //     output += blockSize;
-    //     outputByteLen -= blockSize;
-
-    //     if (outputByteLen > 0)
-    //         KeccakF1600(state);
-    // }
     
 }
 

@@ -4,17 +4,12 @@
 #include "random.c"
 #include <time.h>
 #include <string.h>
-#include <sys/resource.h>
 
-<<<<<<< HEAD
-#define n_inputs 25000
-=======
-#define n_inputs 1000000
->>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
+#define n_inputs 250000
 #define buffer_max 512
-#define row_size 25*sizeof(uint64_t)
+#define uint_row_size 25*sizeof(uint64_t)
 
-int generate_input(int n){
+void generate_input(int n){
     //TODO: Could save to array rather than file
     char *filename = "input.txt";
 
@@ -22,7 +17,6 @@ int generate_input(int n){
     if (f == NULL)
     {
         printf("Error opening the file %s", filename);
-        return -1;
     }
 
     for (int i = 0; i < n; i++) {
@@ -40,15 +34,32 @@ int generate_input(int n){
     }
 
     fclose(f);
-
-    return 0;
 }
 
-<<<<<<< HEAD
-int preprocess_loadInputs(uint64_t state[n_inputs][25], int num_inputs){
-=======
+void write_output(uint64_t *state, int n){
+    char *filename = "output.txt";
+
+    FILE *f = fopen(filename, "w");
+    if (f == NULL)
+    {
+        printf("Error opening the file %s", filename);
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < 25; j++){
+            fprintf(f, "0x%.16llx", state[i * 25 + j]);
+                
+                    if (j == 24){
+                        if (i != n-1)
+                            fprintf(f,"\n");
+                    }
+                    else
+                        fprintf(f,",");
+
+        }
+    }
+}
+
 int preprocess_loadInputs(uint64_t *state, int num_inputs){
->>>>>>> 2756e90fcac49471e3aac76e1e2b106d4aa15f90
     unsigned char *inputs[num_inputs];
     char *FILENAME = "input.txt";
     char *line_buf = NULL;
@@ -72,7 +83,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
             break; 
 
         //Allocate enough memory to store actual string pointed to by line_buf
-        inputs[line_count] = malloc(512 * sizeof(char));
+        inputs[line_count] = malloc(2 * 512 * sizeof(char));
         if(inputs[line_count] == NULL){
             printf("Failed to allocate memory on input\n");
             return EXIT_FAILURE;
@@ -103,7 +114,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
         individual_length = (unsigned char *)ptr - inputs[j];
         memcpy(temp, inputs[j], individual_length);
         for (int i = 0; i < 25; i++){
-            state[j*row_size + i] = strtoul(temp,&remaining,16);
+            state[j*uint_row_size + i] = strtoul(temp,&remaining,16);
 
             if (!ptr)
                 break;
@@ -131,7 +142,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
 }
 
 int main(){
-    uint64_t *state_input = malloc(8 * n_inputs * row_size);
+    uint64_t *state_input = malloc(8 * n_inputs * uint_row_size);
     
     clock_t start, end = 0;
 
@@ -148,11 +159,15 @@ int main(){
     printf("\nStarting Keccak hashing...\n");
     start = clock();
     Keccak(256, 1344, state_input, n_inputs);
-
     end = clock();
+
+
     /* Get the time taken by program to execute in seconds */
     double duration = ((double)end - start)/CLOCKS_PER_SEC;
 
     printf("\nTime taken to hash %i inputs: %f seconds\n", n_inputs, duration);
+
+    write_output(state_input, n_inputs);
+    printf("Output written to output.txt\n");
     //free(state_input);
 }
