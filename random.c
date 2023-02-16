@@ -164,3 +164,7 @@ double genrand64_real3(void)
 {
     return ((genrand64_int64() >> 12) + 0.5) * (1.0/4503599627370496.0);
 }
+
+// int main(){
+//     printf("Test");
+// }

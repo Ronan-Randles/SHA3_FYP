@@ -5,9 +5,10 @@
 #include <time.h>
 #include <string.h>
 
-#define n_inputs 250000
+#define n_inputs 256*64
 #define buffer_max 512
-#define uint_row_size 25*sizeof(uint64_t)
+#define inputs_per_row 25
+#define row_mem_size inputs_per_row*sizeof(uint64_t)
 
 void generate_input(int n){
     //TODO: Could save to array rather than file
@@ -45,10 +46,10 @@ void write_output(uint64_t *state, int n){
         printf("Error opening the file %s", filename);
     }
     for (int i = 0; i < n; i++) {
-        for (int j = 0; j < 25; j++){
-            fprintf(f, "0x%.16llx", state[i * 25 + j]);
+        for (int j = 0; j < inputs_per_row; j++){
+            fprintf(f, "0x%.16llx", state[i * inputs_per_row + j]);
                 
-                    if (j == 24){
+                    if (j == inputs_per_row - 1){
                         if (i != n-1)
                             fprintf(f,"\n");
                     }
@@ -113,8 +114,8 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
         ptr = strchr(inputs[j],',');
         individual_length = (unsigned char *)ptr - inputs[j];
         memcpy(temp, inputs[j], individual_length);
-        for (int i = 0; i < 25; i++){
-            state[j*uint_row_size + i] = strtoul(temp,&remaining,16);
+        for (int i = 0; i < inputs_per_row; i++){
+            state[j* inputs_per_row + i] = strtoull(temp,&remaining,16);
 
             if (!ptr)
                 break;
@@ -142,8 +143,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
 }
 
 int main(){
-    uint64_t *state_input = malloc(8 * n_inputs * uint_row_size);
-    
+    uint64_t *state_input = malloc(n_inputs * row_mem_size);
     clock_t start, end = 0;
 
     printf("\nGenerating inputs...\n");
@@ -151,10 +151,6 @@ int main(){
 
     printf("\nLoading inputs...\n");
     preprocess_loadInputs(state_input, n_inputs);
-    
-    // for (int i = 0; i < sizeof(inputs)/sizeof(inputs[0]); i++){
-    //     printf("Inputs[%i]: %s\n", i, inputs[i]);
-    // }
 
     printf("\nStarting Keccak hashing...\n");
     start = clock();
