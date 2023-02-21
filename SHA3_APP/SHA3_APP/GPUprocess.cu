@@ -49,7 +49,8 @@ typedef uint64_t tKeccakLane;
 #define ROL64(a, offset) ((((uint64_t)a) << offset) ^ (((uint64_t)a) >> (64-offset)))
 #define i(x, y) ((x)+5*(y))
 #define Keccak_Rounds 24
-#define uint_row_size 25*sizeof(uint64_t)
+#define inputs_per_row 25
+#define row_mem_size inputs_per_row * sizeof(uint64_t)
 #define SHA3_CONST(x) x##L
 enum last_permutation { Theta, Rho_PI, Chi, Iota };
 char* perm_strings[4] = {(char *)"Theta", (char *)"Rho_PI", (char *)"Chi", (char *)"Iota" };
@@ -62,37 +63,42 @@ enum last_permutation last_perm;
 
 
 
-//void VerifyGPUOperation();
+void VerifyGPUOperation(uint64_t *cpu_ouput, uint64_t *gpu_output, int num_inputs);
+static void print_state(uint64_t state[25], int round);
 
-void GPUProcessing(uint64_t* input, int num_inputs)
+void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_output, int num_inputs)
 {
     uint64_t* d_state_in;
-    uint64_t* state_out;
+    
     cudaEvent_t start, stop;
-    float time;
-    int state_size_bytes = 8 * num_inputs * uint_row_size;
 
-    dim3 dimGrid(ceil(num_inputs / 16.0), 1, 1);
-    dim3 dimBlock(16, 16, 1);
+    float time;
+    size_t state_size_bytes = num_inputs * row_mem_size;
+
+    dim3 dimBlock(16, 1, 1);
+    // Calculate the number of blocks required based on the number of inputs
+    dim3 dimGrid(ceil((num_inputs) / (dimBlock.x)),1,1);
+    int numThreads = dimBlock.x * dimBlock.y * dimGrid.x * dimGrid.y;
+    printf("Total number of threads: %d\n", numThreads);
+    printf("dimGrid.x: % i, blockDim.x : % i\n", dimGrid.x, dimBlock.x);
+
 
     /* Allocate device memory */
     checkCudaErrors(cudaMalloc((void**)&d_state_in, state_size_bytes));
 
-    /* Allocate host memory for state_out */
-    state_out = (uint64_t*)malloc(state_size_bytes);
-
     /* Initialise device memory */
-    checkCudaErrors(cudaMemcpy(d_state_in, state_out, state_size_bytes, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_state_in, input, state_size_bytes, cudaMemcpyHostToDevice));
 
     /* Create timing events*/
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
     cudaEventRecord(start, 0);
-
+    //print_state(&input[0], -1);
     /* Launch CUDA GPU kernels */
     Keccak_gpu <<<dimGrid, dimBlock >> > (256, 1344, d_state_in, num_inputs);
-    printf("State out[0]: %.16llx", state_out[0]);
+    cudaDeviceSynchronize();
+
 
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -104,23 +110,35 @@ void GPUProcessing(uint64_t* input, int num_inputs)
     printf("\nTime for kernel execution is %3.2f ms\n", time);
 
     /* Copy from device back to host */
-    checkCudaErrors(cudaMemcpy(input, d_state_in, state_size_bytes, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(gpu_state_out, d_state_in, state_size_bytes, cudaMemcpyDeviceToHost));
+    //print_state(&gpu_state_out[0], -2);
 
     /* Verify correct operation */
-    // Ommitted here ...
+   // VerifyGPUOperation(cpu_output, gpu_state_out, num_inputs);
 
     /* Free allocated memory on both device and host */
     checkCudaErrors(cudaFree(d_state_in));
-    printf(" Hashing complete \n");
 }
 
-__device__ static void print_state(uint64_t state[25], int round) {
+void VerifyGPUOperation(uint64_t* cpu_output, uint64_t* gpu_output, int num_inputs) {
+    for (int i = 0; i < num_inputs; i++) {
+        for (int j = 0; j < inputs_per_row; j++) {
+            if (cpu_output[i * inputs_per_row + j] != gpu_output[i * inputs_per_row + j]) {
+                fprintf(stderr, "\nFailed to validate output equalities, CPU[%i][%i]:%.16llx != GPU[%i][%i]:%.16llx\n", i, j, cpu_output[i * inputs_per_row + j], i, j, gpu_output[i * inputs_per_row + j]);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    printf("\nOutputs successfully verified\n");
+}
+
+static void print_state(uint64_t state[25], int round) {
     int x, y;
-    printf("%s round %i\n", perm_strings[last_perm], round);
+   // printf("%s round %i\n", perm_strings[last_perm], round);
     //print in format of sha3 example pdf
     for (int p = 0; p < 5; p++) {
         for (int l = 0; l < 5; l++) {
-            printf("[%i,%i]: %.16lx ", l, p, readLane(l, p));
+            printf("[%i,%i]: %.16llx ", l, p, readLane(l, p));
             if (((p * 5 + l) % 2) == 1)
                 printf("\n");
         }
@@ -148,7 +166,6 @@ __device__ void KeccakF1600(void* state)
     SHA3_CONST(0x0000000080000001UL), SHA3_CONST(0x8000000080008008UL)
     };
 
-    // uint8_t LFSRstate = 0x01;
     //print_state(state,0);
     for (round = 0; round < 25; round++)
     {
@@ -209,7 +226,6 @@ __device__ void KeccakF1600(void* state)
         }
 
     }
-
 }
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -218,12 +234,13 @@ __device__ void KeccakF1600(void* state)
 __global__ void Keccak_gpu(unsigned int rate, unsigned int capacity, uint64_t* input, int n_inputs)
 {
     int c = blockIdx.x * blockDim.x + threadIdx.x;
+    //printf("blockIdx.x: %i, blockDim.x:%i, threadIdx.x: %i, c:%i\n", blockIdx.x, blockDim.x, threadIdx.x, c);
 
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
         return;
-    
-    if (c < n_inputs) {     
+
+    if (c < n_inputs) {
         KeccakF1600(&input[c]);
     }
 }

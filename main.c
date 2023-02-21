@@ -5,7 +5,7 @@
 #include <time.h>
 #include <string.h>
 
-#define n_inputs 256*64
+#define n_inputs 16
 #define buffer_max 512
 #define inputs_per_row 25
 #define row_mem_size inputs_per_row*sizeof(uint64_t)
@@ -46,8 +46,9 @@ void write_output(uint64_t *state, int n){
         printf("Error opening the file %s", filename);
     }
     for (int i = 0; i < n; i++) {
+        //print_state(&state[i], i);
         for (int j = 0; j < inputs_per_row; j++){
-            fprintf(f, "0x%.16llx", state[i * inputs_per_row + j]);
+            fprintf(f, "0x%.16lx", state[i * n_inputs + j]);
                 
                     if (j == inputs_per_row - 1){
                         if (i != n-1)
@@ -61,12 +62,18 @@ void write_output(uint64_t *state, int n){
 }
 
 int preprocess_loadInputs(uint64_t *state, int num_inputs){
-    unsigned char *inputs[num_inputs];
+    
+    char **inputs = malloc(n_inputs * 512 * sizeof(char));
+    if(inputs == NULL){
+        printf("Failed to allocate memory on input\n");
+        return EXIT_FAILURE;
+    }
+
     char *FILENAME = "input.txt";
     char *line_buf = NULL;
     size_t line_buf_size = 0;
     int line_count = 0;
-    ssize_t line_size;
+    int line_size;
 
     //Take in lines from input.txt and save as individual state inputs
     FILE *fp = fopen(FILENAME, "r");
@@ -84,7 +91,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
             break; 
 
         //Allocate enough memory to store actual string pointed to by line_buf
-        inputs[line_count] = malloc(2 * 512 * sizeof(char));
+        inputs[line_count] = malloc(512 * sizeof(char));
         if(inputs[line_count] == NULL){
             printf("Failed to allocate memory on input\n");
             return EXIT_FAILURE;
@@ -100,19 +107,19 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
     fclose(fp);
 
     //
-    unsigned char *ptr;
+    char *ptr;
     char *new_ptr;
     char *remaining;
-    unsigned char *prev_ptr;
+    char *prev_ptr;
     int individual_length;
     char *temp = malloc(MAXSTRLEN);
     int state_mem_size = 0;
 
     //memset(state, 0, sizeof(state));
-    for (int j = 0; j < num_inputs; j++){
+    for (int j = 0; j < n_inputs; j++){
         //Absorb input blocks from sting using parsing
         ptr = strchr(inputs[j],',');
-        individual_length = (unsigned char *)ptr - inputs[j];
+        individual_length = ptr - inputs[j];
         memcpy(temp, inputs[j], individual_length);
         for (int i = 0; i < inputs_per_row; i++){
             state[j* inputs_per_row + i] = strtoull(temp,&remaining,16);

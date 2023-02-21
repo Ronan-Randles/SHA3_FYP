@@ -9,7 +9,7 @@
 
 #include "GPUProcess.h"
 
-#define n_inputs 256*64
+#define n_inputs 16
 #define buffer_max 512
 #define inputs_per_row 25
 #define row_mem_size inputs_per_row*sizeof(uint64_t)
@@ -42,10 +42,14 @@ int write_output(uint64_t* state, int n) {
     return EXIT_SUCCESS;
 }
 
-int preprocess_loadInputs(uint64_t* state) {
+int preprocess_loadInputs(uint64_t* state, char* FILENAME) {
     //TODO: SHOULD BE UNSIGNED?
-    char* inputs[n_inputs];
-    char* FILENAME = (char *)"../../input.txt";
+    //Change to be allocated on heap
+    char **inputs = (char **)malloc(n_inputs * 512 * sizeof(char));
+    if (inputs == NULL) {
+        printf("Failed to allocate memory on input\n");
+        return EXIT_FAILURE;
+    }
     size_t line_buf_size = 0;
     int line_count = 0;
     size_t line_size;
@@ -62,12 +66,11 @@ int preprocess_loadInputs(uint64_t* state) {
     string tp = "";
     /* Loop through until we are done with the file. */
     do
-    {
-        
+    {   
         getline(fp, tp);
 
         //Allocate enough memory to store actual string pointed to by line_buf
-        inputs[line_count] = (char *)malloc(16 * 512 * sizeof(char));
+        inputs[line_count] = (char *)malloc(512 * sizeof(char));
         if (inputs[line_count] == NULL) {
             printf("Failed to allocate memory on input\n");
             return EXIT_FAILURE;
@@ -127,16 +130,23 @@ int preprocess_loadInputs(uint64_t* state) {
 int main()
 {
     uint64_t* state_input = (uint64_t*)malloc(n_inputs * row_mem_size);
- 
+    uint64_t* gpu_state_out = (uint64_t*)malloc(n_inputs * row_mem_size);
+    uint64_t* cpu_out = (uint64_t*)malloc(n_inputs * row_mem_size);
+
     /*Load cpu generated inputs*/
     printf("\nLoading inputs from inputs.txt\n");
-    preprocess_loadInputs(state_input);
+    preprocess_loadInputs(state_input, (char*)"../../input.txt");
+
+    /* Load cpu outputs for comparrison */
+    printf("\nLoading cpu outputs for comparison\n");
+    preprocess_loadInputs(cpu_out, (char*)"../../output.txt");
 
     printf("Starting Keccak Hashing\n");
-    GPUProcessing(state_input, n_inputs);
+    GPUProcessing(state_input, gpu_state_out, cpu_out, n_inputs);
 
-    printf("Wrote outputs to outputs_gpu.txt\n");
-    write_output(state_input, n_inputs);
+    printf("Writing outputs to outputs_gpu.txt\n"); 
+    write_output(gpu_state_out, n_inputs);
+   
     
     return(EXIT_SUCCESS);
 }
