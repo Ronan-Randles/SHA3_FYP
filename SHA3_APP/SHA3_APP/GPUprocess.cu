@@ -77,7 +77,7 @@ void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_outpu
 
     dim3 dimBlock(16, 1, 1);
     // Calculate the number of blocks required based on the number of inputs
-    dim3 dimGrid(ceil((num_inputs) / (dimBlock.x)),1,1);
+    dim3 dimGrid(ceil((num_inputs) / (dimBlock.x * dimBlock.y)),1,1);
     int numThreads = dimBlock.x * dimBlock.y * dimGrid.x * dimGrid.y;
     printf("Total number of threads: %d\n", numThreads);
     printf("dimGrid.x: % i, blockDim.x : % i\n", dimGrid.x, dimBlock.x);
@@ -114,7 +114,7 @@ void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_outpu
     //print_state(&gpu_state_out[0], -2);
 
     /* Verify correct operation */
-   // VerifyGPUOperation(cpu_output, gpu_state_out, num_inputs);
+    VerifyGPUOperation(cpu_output, gpu_state_out, num_inputs);
 
     /* Free allocated memory on both device and host */
     checkCudaErrors(cudaFree(d_state_in));
@@ -167,7 +167,7 @@ __device__ void KeccakF1600(void* state)
     };
 
     //print_state(state,0);
-    for (round = 0; round < 25; round++)
+    for (round = 0; round < 24; round++)
     {
         //print_state(state, round);
         //Theta step
@@ -234,6 +234,7 @@ __device__ void KeccakF1600(void* state)
 __global__ void Keccak_gpu(unsigned int rate, unsigned int capacity, uint64_t* input, int n_inputs)
 {
     int c = blockIdx.x * blockDim.x + threadIdx.x;
+    //int r = blockIdx.y * blockDim.y + threadIdx.y;
     //printf("blockIdx.x: %i, blockDim.x:%i, threadIdx.x: %i, c:%i\n", blockIdx.x, blockDim.x, threadIdx.x, c);
 
     //Ensure rate and capacity sum to 1600 for keccakF1600
@@ -241,6 +242,6 @@ __global__ void Keccak_gpu(unsigned int rate, unsigned int capacity, uint64_t* i
         return;
 
     if (c < n_inputs) {
-        KeccakF1600(&input[c]);
+        KeccakF1600(&input[c * inputs_per_row]);
     }
 }

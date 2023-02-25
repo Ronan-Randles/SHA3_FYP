@@ -46,9 +46,9 @@ void write_output(uint64_t *state, int n){
         printf("Error opening the file %s", filename);
     }
     for (int i = 0; i < n; i++) {
-        //print_state(&state[i], i);
+        //print_state(&state[i*inputs_per_row], i);
         for (int j = 0; j < inputs_per_row; j++){
-            fprintf(f, "0x%.16lx", state[i * n_inputs + j]);
+            fprintf(f, "0x%.16llx", state[i * inputs_per_row + j]);
                 
                     if (j == inputs_per_row - 1){
                         if (i != n-1)
@@ -140,6 +140,7 @@ int preprocess_loadInputs(uint64_t *state, int num_inputs){
             individual_length = ptr - prev_ptr;
         }
     }
+
     //State inputs are now saved to state, an n_inputs*25 array.
     //Now safe to free malloc'ed memory
     free(temp);

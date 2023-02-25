@@ -41,6 +41,7 @@ typedef uint64_t tKeccakLane;
 #define i(x, y) ((x)+5*(y))
 #define Keccak_Rounds 24
 #define SHA3_CONST(x) x##L
+#define inputs_per_row 25
 enum last_permutation {Theta, Rho_PI, Chi, Iota};
 char * perm_strings [4] = {"Theta", "Rho_PI", "Chi", "Iota"};
 enum last_permutation last_perm;
@@ -96,7 +97,7 @@ void KeccakF1600(void *state)
     };
     
     //print_state(state,0);
-    for (round = 0; round < 25; round++)
+    for (round = 0; round < 24; round++)
     {
         //print_state(state, round);
         //Theta step
@@ -167,9 +168,12 @@ void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inp
         return;
     // print_state(state, -1);
         for (int i = 0; i < n_inputs; i++) { 
-            //print_state(&input[i], i);
-            KeccakF1600(&input[i]);
-            // print_state(&input[i], i);
+            // printf("before\n");
+            // print_state(&input[i * inputs_per_row], i);
+            KeccakF1600(&input[i * inputs_per_row]);
+            
+            // printf("after\n");
+            // print_state(&input[i * inputs_per_row], i);
     }
     
 
