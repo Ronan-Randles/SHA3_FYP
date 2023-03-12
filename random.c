@@ -55,6 +55,7 @@
 
 
 #include <stdio.h>
+#include "random.h"
 
 #define NN 312
 #define MM 156
@@ -74,33 +75,6 @@ void init_genrand64(unsigned long long seed)
     mt[0] = seed;
     for (mti=1; mti<NN; mti++) 
         mt[mti] =  (6364136223846793005ULL * (mt[mti-1] ^ (mt[mti-1] >> 62)) + mti);
-}
-
-/* initialize by an array with array-length */
-/* init_key is the array for initializing keys */
-/* key_length is its length */
-void init_by_array64(unsigned long long init_key[],
-		     unsigned long long key_length)
-{
-    unsigned long long i, j, k;
-    init_genrand64(19650218ULL);
-    i=1; j=0;
-    k = (NN>key_length ? NN : key_length);
-    for (; k; k--) {
-        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 3935559000370003845ULL))
-          + init_key[j] + j; /* non linear */
-        i++; j++;
-        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
-        if (j>=key_length) j=0;
-    }
-    for (k=NN-1; k; k--) {
-        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 2862933555777941757ULL))
-          - i; /* non linear */
-        i++;
-        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
-    }
-
-    mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */ 
 }
 
 /* generates a random number on [0, 2^64-1]-interval */
@@ -140,31 +114,3 @@ unsigned long long genrand64_int64(void)
 
     return x;
 }
-
-/* generates a random number on [0, 2^63-1]-interval */
-long long genrand64_int63(void)
-{
-    return (long long)(genrand64_int64() >> 1);
-}
-
-/* generates a random number on [0,1]-real-interval */
-double genrand64_real1(void)
-{
-    return (genrand64_int64() >> 11) * (1.0/9007199254740991.0);
-}
-
-/* generates a random number on [0,1)-real-interval */
-double genrand64_real2(void)
-{
-    return (genrand64_int64() >> 11) * (1.0/9007199254740992.0);
-}
-
-/* generates a random number on (0,1)-real-interval */
-double genrand64_real3(void)
-{
-    return ((genrand64_int64() >> 12) + 0.5) * (1.0/4503599627370496.0);
-}
-
-// int main(){
-//     printf("Test");
-// }

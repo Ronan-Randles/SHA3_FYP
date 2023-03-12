@@ -1,0 +1,6 @@
+﻿  SHA3_APP.cpp
+C:\Users\Ronan\SHA3_FYP\SHA3_APP\SHA3_APP\SHA3_APP.cpp(100,33): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+C:\Users\Ronan\SHA3_FYP\SHA3_APP\SHA3_APP\SHA3_APP.cpp(118,37): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+C:\Users\Ronan\SHA3_FYP\SHA3_APP\SHA3_APP\SHA3_APP.cpp(55,12): warning C4101: 'line_size': unreferenced local variable
+C:\Users\Ronan\SHA3_FYP\SHA3_APP\SHA3_APP\SHA3_APP.cpp(89,11): warning C4101: 'new_ptr': unreferenced local variable
+  SHA3_APP.vcxproj -> C:\Users\Ronan\SHA3_FYP\SHA3_APP\x64\Debug\SHA3_APP.exe

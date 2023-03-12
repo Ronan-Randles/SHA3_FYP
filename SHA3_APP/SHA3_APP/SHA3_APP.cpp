@@ -6,10 +6,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-
+#include <cuda_runtime.h>
 #include "GPUProcess.h"
 
-#define n_inputs 16
+#define n_inputs 1000000
 #define buffer_max 512
 #define inputs_per_row 25
 #define row_mem_size inputs_per_row*sizeof(uint64_t)
@@ -17,6 +17,16 @@
 
 using namespace std;
 
+/**
+
+    @brief Writes the output of the program to a file named "output_gpu.txt".
+
+    @param state A pointer to an array of 64-bit unsigned integers representing the state.
+
+    @param n An integer representing the number of output rows to be written to the file.
+
+    @return An integer representing the status of the function execution. Returns EXIT_SUCCESS (0) if successful, and EXIT_FAILURE (1) otherwise.
+*/
 int write_output(uint64_t* state, int n) {
     char* filename = (char *)"output_gpu.txt";
 
@@ -129,24 +139,52 @@ int preprocess_loadInputs(uint64_t* state, char* FILENAME) {
 
 int main()
 {
-    uint64_t* state_input = (uint64_t*)malloc(n_inputs * row_mem_size);
-    uint64_t* gpu_state_out = (uint64_t*)malloc(n_inputs * row_mem_size);
+    /* Used to run iterations with input step sizes */
+    uint64_t mult = 1;
+    uint64_t* state_input = (uint64_t*)malloc(n_inputs * mult * row_mem_size);
+    uint64_t* gpu_state_out = (uint64_t*)malloc(n_inputs * mult * row_mem_size);
     uint64_t* cpu_out = (uint64_t*)malloc(n_inputs * row_mem_size);
 
+    /* print info for occupancy calculation */
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    for (int i = 0; i < deviceCount; i++) {
+        cudaDeviceProp deviceProp;
+        cudaGetDeviceProperties(&deviceProp, i);
+        printf("Device %d: %s\n", i, deviceProp.name);
+        printf("Compute capability: %d.%d\n", deviceProp.major, deviceProp.minor);
+        int numSMs = deviceProp.multiProcessorCount;
+        printf("Number of SMs: %d\n", numSMs);
+        int maxThreadsPerSM = deviceProp.maxThreadsPerMultiProcessor;
+        printf("Max threads per SM: %d\n", maxThreadsPerSM);
+        int maxThreads = maxThreadsPerSM * numSMs;
+        printf("Max threads: %d\n", maxThreads);
+        int maxBlocksPerSM = deviceProp.maxThreadsPerMultiProcessor / deviceProp.warpSize;
+        printf("Max blocks per SM: %d\n", maxBlocksPerSM);
+        int maxBlocks = maxBlocksPerSM * numSMs;
+        printf("Max blocks: %d\n", maxBlocks);
+        printf("Threads per block: %d\n", deviceProp.maxThreadsPerBlock);
+        printf("Registers per thread: %d\n", deviceProp.regsPerBlock/ deviceProp.maxThreadsPerBlock);
+        printf("User shared memory per block (bytes): %zu\n", deviceProp.sharedMemPerBlock);
+    }
     /*Load cpu generated inputs*/
     printf("\nLoading inputs from inputs.txt\n");
     preprocess_loadInputs(state_input, (char*)"../../input.txt");
 
-    /* Load cpu outputs for comparrison */
+    ///* Load cpu outputs for comparrison */
     printf("\nLoading cpu outputs for comparison\n");
     preprocess_loadInputs(cpu_out, (char*)"../../output.txt");
 
-    printf("Starting Keccak Hashing\n");
-    GPUProcessing(state_input, gpu_state_out, cpu_out, n_inputs);
+    printf("Launching GPUProcessing\n");
+    printf("#Inputs  Time (s)");
+    for (int j = 1; j <= mult; j++)
+        GPUProcessing(state_input, gpu_state_out, cpu_out, n_inputs * j);
 
     printf("Writing outputs to outputs_gpu.txt\n"); 
     write_output(gpu_state_out, n_inputs);
    
-    
+    free(state_input);
+    free(gpu_state_out);
+    free(cpu_out);
     return(EXIT_SUCCESS);
 }

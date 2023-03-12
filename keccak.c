@@ -10,30 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-/**
-  * Function to compute the Keccak[r, c] sponge function over a given input.
-  * @param  rate            The value of the rate r.
-  * @param  capacity        The value of the capacity c.
-  * @param  input           Pointer to the input message.
-  * @param  inputByteLen    The number of input bytes provided in the input message.
-  * @param  delimitedSuffix Bits that will be automatically appended to the end
-  *                         of the input message, as in domain separation.
-  *                         This is a byte containing from 0 to 7 bits
-  *                         These <i>n</i> bits must be in the least significant bit positions
-  *                         and must be delimited with a bit 1 at position <i>n</i>
-  *                         (counting from 0=LSB to 7=MSB) and followed by bits 0
-  *                         from position <i>n</i>+1 to position 7.
-  *                         Some examples:
-  *                             - If no bits are to be appended, then @a delimitedSuffix must be 0x01.
-  *                             - If the 2-bit sequence 0,1 is to be appended (as for SHA3-*), @a delimitedSuffix must be 0x06.
-  *                             - If the 4-bit sequence 1,1,1,1 is to be appended (as for SHAKE*), @a delimitedSuffix must be 0x1F.
-  *                             - If the 7-bit sequence 1,1,0,1,0,0,0 is to be absorbed, @a delimitedSuffix must be 0x8B.
-  * @param  output          Pointer to the buffer where to store the output.
-  * @param  outputByteLen   The number of output bytes desired.
-  * @pre    One must have r+c=1600 and the rate a multiple of 8 bits in this implementation.
-  */
-void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs);
+#include "keccak.h"
 
 typedef uint64_t tKeccakLane;
 
@@ -65,7 +42,7 @@ unsigned char *sample_input_2 = "0xa3a3a3a3a3a3a3a3,0xa3a3a3a3a3a3a3a3,0xa3a3a3a
 
 static void print_state(uint64_t state[25], int round){
     int x, y;
-    printf("%s round %i\n", perm_strings[last_perm], round);
+    //printf("%s round %i\n", perm_strings[last_perm], round);
     //print in format of sha3 example pdf
     for (int p = 0; p < 5; p++) {
         for (int l = 0; l < 5; l++) {
@@ -77,8 +54,20 @@ static void print_state(uint64_t state[25], int round){
     printf("\n");
 }
 
+/**
+    @brief Applies the KeccakF1600 permutation to the input state.
+    @param state A pointer to the state to be permuted.
+    @details This function applies the KeccakF1600 permutation to the input state
+    and modifies it in-place. The permutation consists of 24 rounds, each of which
+    applies the Theta, Rho and Pi, Chi, and Iota steps to the state in sequence.
+    The permutation constants used in the Iota step are defined in the keccakf_rndc
+    array.
+    @note This function does not return a value, it modifies the input state in-place.
+*/
 void KeccakF1600(void *state)
 {
+    // printf("INPUT\n");
+    // print_state(state, 99);
     unsigned int round, x, y, j, t;
     
     static const uint64_t keccakf_rndc[24] = {
@@ -156,18 +145,16 @@ void KeccakF1600(void *state)
         }
         
     }
-    
 }
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAXSTRLEN sizeof("0xa3a3a3a3a3a3a3a3")
 
-void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int n_inputs)
+void Keccak(unsigned int rate, unsigned int capacity, uint64_t *input, int num_inputs)
 {
     //Ensure rate and capacity sum to 1600 for keccakF1600
     if (((rate + capacity) != 1600) || ((rate % 8) != 0))
         return;
     // print_state(state, -1);
-        for (int i = 0; i < n_inputs; i++) { 
+        for (int i = 0; i < num_inputs; i++) { 
             // printf("before\n");
             // print_state(&input[i * inputs_per_row], i);
             KeccakF1600(&input[i * inputs_per_row]);

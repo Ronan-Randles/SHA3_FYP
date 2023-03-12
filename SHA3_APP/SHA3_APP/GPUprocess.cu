@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <cmath>
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -20,28 +21,6 @@
 //#include "GPUProcess.h"
 
 
-/**
-  * Function to compute the Keccak[r, c] sponge function over a given input.
-  * @param  rate            The value of the rate r.
-  * @param  capacity        The value of the capacity c.
-  * @param  input           Pointer to the input message.
-  * @param  inputByteLen    The number of input bytes provided in the input message.
-  * @param  delimitedSuffix Bits that will be automatically appended to the end
-  *                         of the input message, as in domain separation.
-  *                         This is a byte containing from 0 to 7 bits
-  *                         These <i>n</i> bits must be in the least significant bit positions
-  *                         and must be delimited with a bit 1 at position <i>n</i>
-  *                         (counting from 0=LSB to 7=MSB) and followed by bits 0
-  *                         from position <i>n</i>+1 to position 7.
-  *                         Some examples:
-  *                             - If no bits are to be appended, then @a delimitedSuffix must be 0x01.
-  *                             - If the 2-bit sequence 0,1 is to be appended (as for SHA3-*), @a delimitedSuffix must be 0x06.
-  *                             - If the 4-bit sequence 1,1,1,1 is to be appended (as for SHAKE*), @a delimitedSuffix must be 0x1F.
-  *                             - If the 7-bit sequence 1,1,0,1,0,0,0 is to be absorbed, @a delimitedSuffix must be 0x8B.
-  * @param  output          Pointer to the buffer where to store the output.
-  * @param  outputByteLen   The number of output bytes desired.
-  * @pre    One must have r+c=1600 and the rate a multiple of 8 bits in this implementation.
-  */
 __global__ void Keccak_gpu(unsigned int rate, unsigned int capacity, uint64_t* input, int n_inputs);
 
 typedef uint64_t tKeccakLane;
@@ -66,6 +45,19 @@ enum last_permutation last_perm;
 void VerifyGPUOperation(uint64_t *cpu_ouput, uint64_t *gpu_output, int num_inputs);
 static void print_state(uint64_t state[25], int round);
 
+/**
+
+    @brief Processes Keccak hashing on GPU using CUDA kernel function.
+    @param input The input message for Keccak hashing.
+    @param gpu_state_out The output Keccak state on GPU.
+    @param cpu_output The output Keccak state on CPU for verification.
+    @param num_inputs The number of input messages.
+    @details This function allocates device memory, initialises device memory with input message,
+    launches Keccak_gpu kernel function on GPU, copies the output state from device to host,
+    verifies the operation with CPU output and frees the allocated memory on both host and device.
+    It also records timing events using CUDA events to measure the execution time of kernel function.
+*/
+
 void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_output, int num_inputs)
 {
     uint64_t* d_state_in;
@@ -77,11 +69,10 @@ void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_outpu
 
     dim3 dimBlock(16, 1, 1);
     // Calculate the number of blocks required based on the number of inputs
-    dim3 dimGrid(ceil((num_inputs) / (dimBlock.x * dimBlock.y)),1,1);
+    dim3 dimGrid(ceil((num_inputs) / ((double)(dimBlock.x * dimBlock.y))),1,1);
     int numThreads = dimBlock.x * dimBlock.y * dimGrid.x * dimGrid.y;
-    printf("Total number of threads: %d\n", numThreads);
-    printf("dimGrid.x: % i, blockDim.x : % i\n", dimGrid.x, dimBlock.x);
-
+    //printf("Total number of threads: %d\n", numThreads);
+    //printf("dimGrid.x: % i, blockDim.x : % i\n", dimGrid.x, dimBlock.x);
 
     /* Allocate device memory */
     checkCudaErrors(cudaMalloc((void**)&d_state_in, state_size_bytes));
@@ -89,14 +80,12 @@ void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_outpu
     /* Initialise device memory */
     checkCudaErrors(cudaMemcpy(d_state_in, input, state_size_bytes, cudaMemcpyHostToDevice));
 
-    /* Create timing events*/
+    /* Kernel timing events*/
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-
     cudaEventRecord(start, 0);
-    //print_state(&input[0], -1);
     /* Launch CUDA GPU kernels */
-    Keccak_gpu <<<dimGrid, dimBlock >> > (256, 1344, d_state_in, num_inputs);
+    Keccak_gpu << <dimGrid, dimBlock >> > (256, 1344, d_state_in, num_inputs);
     cudaDeviceSynchronize();
 
 
@@ -104,22 +93,34 @@ void GPUProcessing(uint64_t* input, uint64_t* gpu_state_out, uint64_t* cpu_outpu
     cudaEventSynchronize(stop);
 
     cudaEventElapsedTime(&time, start, stop);
+    
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    printf("\nTime for kernel execution is %3.2f ms\n", time);
+    printf("\n  %i   %3.6f \n", num_inputs, time/1000);
 
     /* Copy from device back to host */
     checkCudaErrors(cudaMemcpy(gpu_state_out, d_state_in, state_size_bytes, cudaMemcpyDeviceToHost));
-    //print_state(&gpu_state_out[0], -2);
+
 
     /* Verify correct operation */
     VerifyGPUOperation(cpu_output, gpu_state_out, num_inputs);
 
     /* Free allocated memory on both device and host */
     checkCudaErrors(cudaFree(d_state_in));
+
 }
 
+/**
+
+    @brief Verifies the correct operation of GPU processing by comparing the output generated by GPU with the output generated by CPU.
+    @param cpu_output A pointer to an array of uint64_t values, representing the expected output generated by CPU.
+    @param gpu_output A pointer to an array of uint64_t values, representing the output generated by GPU.
+    @param num_inputs The number of inputs used in the processing.
+    @details This function compares the output generated by GPU with the expected output generated by CPU to verify the correctness of
+    the GPU operation. If any mismatch is detected, an error message is printed on stderr and the program is terminated with an exit
+    status of EXIT_FAILURE. If the verification is successful, a message indicating the success is printed on stdout.
+*/
 void VerifyGPUOperation(uint64_t* cpu_output, uint64_t* gpu_output, int num_inputs) {
     for (int i = 0; i < num_inputs; i++) {
         for (int j = 0; j < inputs_per_row; j++) {
@@ -133,7 +134,6 @@ void VerifyGPUOperation(uint64_t* cpu_output, uint64_t* gpu_output, int num_inpu
 }
 
 static void print_state(uint64_t state[25], int round) {
-    int x, y;
    // printf("%s round %i\n", perm_strings[last_perm], round);
     //print in format of sha3 example pdf
     for (int p = 0; p < 5; p++) {
@@ -149,7 +149,7 @@ static void print_state(uint64_t state[25], int round) {
 
 __device__ void KeccakF1600(void* state)
 {
-    unsigned int round, x, y, j, t;
+    unsigned int round, x, y, t;
 
     static const uint64_t keccakf_rndc[24] = {
     SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL),
